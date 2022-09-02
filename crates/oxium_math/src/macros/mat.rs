@@ -24,6 +24,19 @@ macro_rules! impl_mat_new {
 }
 pub(crate) use impl_mat_new;
 
+/// Implements the `from_rows()` associated function which creates a matrix from row vectors.
+macro_rules! impl_mat_from_rows {
+    ($name:ident<$row:ident> { $($arg:ident),* }) => {
+        impl $name {
+            /// Creates a new matrix from the given rows.
+            pub const fn from_rows($($arg: $row),*) -> Self {
+                Self { rows: [$($arg),*] }
+            }
+        }
+    };
+}
+pub(crate) use impl_mat_from_rows;
+
 /// Implements the [`Index`](std::ops::Index) and [`IndexMut`](std::ops::IndexMut) traits to access matrix rows by 0-based index.
 macro_rules! impl_mat_index {
     ($name:ident<$n:literal, $t:ty> { $($index:literal),* }) => {
@@ -70,6 +83,20 @@ macro_rules! test_mat_new {
 }
 #[cfg(test)]
 pub(crate) use test_mat_new;
+
+/// Creates a test which checks if calling the `from_rows()` associated function correctly sets all matrix rows.
+#[cfg(test)]
+macro_rules! test_mat_from_rows {
+    ($name:ident { $($var:ident { $($r:literal: $row:expr,)* },)* }) => {
+        #[test]
+        fn from_rows() { $(
+            let $var = $name::from_rows($($row),*);
+            $(assert_eq!($var[$r], $row);)*
+        )* }
+    }
+}
+#[cfg(test)]
+pub(crate) use test_mat_from_rows;
 
 /// Creates a test which checks if accessing matrix elements by 0-based index returns the correct elements.
 #[cfg(test)]

@@ -1,4 +1,4 @@
-use crate::macros::{def_mat_struct, impl_mat_index, impl_mat_new};
+use crate::macros::{def_mat_struct, impl_mat_from_rows, impl_mat_index, impl_mat_new};
 use crate::Vec3;
 
 def_mat_struct!(Mat3x3<f32, 3, 3, Vec3>);
@@ -12,11 +12,15 @@ impl_mat_new!(
     }
 );
 
+impl_mat_from_rows!(Mat3x3<Vec3> { r0, r1, r2 });
+
 impl_mat_index!(Mat3x3<3, Vec3> { 0, 1, 2 });
 
 #[cfg(test)]
 mod tests {
-    use crate::macros::{test_mat_index, test_mat_index_out_of_bounds, test_mat_new};
+    use crate::macros::{
+        test_mat_from_rows, test_mat_index, test_mat_index_out_of_bounds, test_mat_new,
+    };
     use crate::{Mat3x3, Vec3};
 
     test_mat_new!(Mat3x3 {
@@ -29,6 +33,19 @@ mod tests {
             0: [x: 0.0, y: 0.1, z: 0.2],
             1: [x: 0.3, y: 0.4, z: 0.5],
             2: [x: 0.6, y: 0.7, z: 0.8],
+        },
+    });
+
+    test_mat_from_rows!(Mat3x3 {
+        a {
+            0: Vec3::new(5.7, 5.8, 5.9),
+            1: Vec3::new(6.0, 6.1, 6.2),
+            2: Vec3::new(6.3, 6.4, 6.5),
+        },
+        b {
+            0: Vec3::new(6.6, 6.7, 6.8),
+            1: Vec3::new(6.9, 7.0, 7.1),
+            2: Vec3::new(7.2, 7.3, 7.4),
         },
     });
 
