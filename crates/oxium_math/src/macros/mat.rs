@@ -70,6 +70,31 @@ macro_rules! impl_mat_index {
 }
 pub(crate) use impl_mat_index;
 
+/// Implements the [`Neg`](std::ops::Neg) trait to perform element-wise matrix negation.
+macro_rules! impl_mat_neg {
+    ($name:ident { $($r:literal),*}) => {
+        /// Perform element-wise matrix negation.
+        impl std::ops::Neg for $name {
+            type Output = Self;
+
+            fn neg(self) -> Self::Output {
+                Self::from_rows($(-self.rows[$r]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        /// Perform element-wise matrix negation.
+        impl std::ops::Neg for &$name {
+            type Output = $name;
+
+            fn neg(self) -> Self::Output {
+                $name::from_rows($(-self.rows[$r]),*)
+            }
+        }
+    };
+}
+pub(crate) use impl_mat_neg;
+
 /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
 #[cfg(test)]
 macro_rules! test_mat_new {
@@ -140,3 +165,18 @@ macro_rules! test_mat_index_out_of_bounds {
 }
 #[cfg(test)]
 pub(crate) use test_mat_index_out_of_bounds;
+
+/// Creates a test which checks if negating a matrix negates all its elements.
+#[cfg(test)]
+macro_rules! test_mat_neg {
+    ($name:ident { $($var:ident { $($val:literal,)* } => { $($val_neg:literal,)* },)* }) => {
+        #[test]
+        fn neg() { $(
+            let $var = $name::new($($val),*);
+            assert_eq!(-$var, $name::new($($val_neg),*));
+            assert_eq!(-&$var, $name::new($($val_neg),*));
+        )* }
+    };
+}
+#[cfg(test)]
+pub(crate) use test_mat_neg;
