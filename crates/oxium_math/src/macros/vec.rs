@@ -57,6 +57,31 @@ macro_rules! impl_vec_index {
 }
 pub(crate) use impl_vec_index;
 
+/// Implements the [`Neg`](std::ops::Neg) trait to perform component-wise vector negation.
+macro_rules! impl_vec_neg {
+    ($name:ident { $($comp:ident),*}) => {
+        /// Perform component-wise vector negation.
+        impl std::ops::Neg for $name {
+            type Output = Self;
+
+            fn neg(self) -> Self::Output {
+                Self::new($(-self.$comp),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        /// Perform component-wise vector negation.
+        impl std::ops::Neg for &$name {
+            type Output = $name;
+
+            fn neg(self) -> Self::Output {
+                $name::new($(-self.$comp),*)
+            }
+        }
+    };
+}
+pub(crate) use impl_vec_neg;
+
 /// Creates a test which checks if calling the `new()` associated function correctly sets all vector components.
 #[cfg(test)]
 macro_rules! test_vec_new {
@@ -113,3 +138,18 @@ macro_rules! test_vec_index_out_of_bounds {
 }
 #[cfg(test)]
 pub(crate) use test_vec_index_out_of_bounds;
+
+/// Creates a test which checks if negating a vector negates all its components.
+#[cfg(test)]
+macro_rules! test_vec_neg {
+    ($name:ident { $($var:ident { $($val:literal),* } => { $($val_neg:literal),* },)* }) => {
+        #[test]
+        fn neg() { $(
+            let $var = $name::new($($val),*);
+            assert_eq!(-$var, $name::new($($val_neg),*));
+            assert_eq!(-&$var, $name::new($($val_neg),*));
+        )* }
+    };
+}
+#[cfg(test)]
+pub(crate) use test_vec_neg;
