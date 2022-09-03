@@ -95,6 +95,51 @@ macro_rules! impl_mat_neg {
 }
 pub(crate) use impl_mat_neg;
 
+/// Implements the [`Add`](std::ops::Add) trait to perform element-wise matrix addition.
+macro_rules! impl_mat_add {
+    ($name:ident { $($r:literal),* }) => {
+        /// Perform element-wise matrix addition.
+        impl std::ops::Add<$name> for $name {
+            type Output = $name;
+
+            fn add(self, other: $name) -> Self::Output {
+                $name::from_rows($(self[$r] + other[$r]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        /// Perform element-wise matrix addition.
+        impl std::ops::Add<&$name> for $name {
+            type Output = Self;
+
+            fn add(self, other: &$name) -> Self::Output {
+                $name::from_rows($(self[$r] + other[$r]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        /// Perform element-wise matrix addition.
+        impl std::ops::Add<$name> for &$name {
+            type Output = $name;
+
+            fn add(self, other: $name) -> Self::Output {
+                $name::from_rows($(self[$r] + other[$r]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        /// Perform element-wise matrix addition.
+        impl std::ops::Add<&$name> for &$name {
+            type Output = $name;
+
+            fn add(self, other: &$name) -> Self::Output {
+                $name::from_rows($(self[$r] + other[$r]),*)
+            }
+        }
+    }
+}
+pub(crate) use impl_mat_add;
+
 /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
 #[cfg(test)]
 macro_rules! test_mat_new {
@@ -180,3 +225,22 @@ macro_rules! test_mat_neg {
 }
 #[cfg(test)]
 pub(crate) use test_mat_neg;
+
+/// Creates a test which checks if adding 2 matrices adds all their elements.
+#[cfg(test)]
+macro_rules! test_mat_add {
+    ($name:ident { $($a:ident { $($a_val:literal,)* } + $b:ident { $($b_val:literal,)* } = $c:ident,)* }) => {
+        #[test]
+        fn add() { $(
+            let $a = $name::new($($a_val),*);
+            let $b = $name::new($($b_val),*);
+            let $c = $name::new($($a_val + $b_val),*);
+            assert_eq!($a + $b, $c);
+            assert_eq!($a + &$b, $c);
+            assert_eq!(&$a + $b, $c);
+            assert_eq!(&$a + &$b, $c);
+        )* }
+    };
+}
+#[cfg(test)]
+pub(crate) use test_mat_add;
