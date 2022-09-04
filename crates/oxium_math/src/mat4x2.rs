@@ -1,5 +1,6 @@
 use crate::macros::{
-    def_mat_struct, impl_mat_add, impl_mat_from_rows, impl_mat_index, impl_mat_neg, impl_mat_new,
+    def_mat_struct, impl_mat_add, impl_mat_add_assign, impl_mat_from_rows, impl_mat_index,
+    impl_mat_neg, impl_mat_new,
 };
 use crate::Vec2;
 
@@ -23,11 +24,13 @@ impl_mat_neg!(Mat4x2 { 0, 1, 2, 3 });
 
 impl_mat_add!(Mat4x2 { 0, 1, 2, 3 });
 
+impl_mat_add_assign!(Mat4x2 { 0, 1, 2, 3 });
+
 #[cfg(test)]
 mod tests {
     use crate::macros::{
-        test_mat_add, test_mat_from_rows, test_mat_index, test_mat_index_out_of_bounds,
-        test_mat_neg, test_mat_new,
+        test_mat_add, test_mat_add_assign, test_mat_from_rows, test_mat_index,
+        test_mat_index_out_of_bounds, test_mat_neg, test_mat_new,
     };
     use crate::{Mat4x2, Vec2};
 
@@ -131,5 +134,30 @@ mod tests {
             0.9, 1.0,
             -1.1, -1.2,
         } = f,
+    });
+
+    test_mat_add_assign!(Mat4x2 {
+        a {
+            -1.3, 1.4,
+            -1.5, 1.6,
+            -1.7, 1.8,
+            -1.9, 2.0,
+        } += b {
+            -2.1, 2.2,
+            2.3, -2.4,
+            -2.5, 2.6,
+            2.7, -2.8,
+        },
+        c {
+            2.9, -3.0,
+            3.1, -3.2,
+            3.3, -3.4,
+            3.5, -3.6,
+        } += d {
+            3.7, 3.8,
+            3.9, 4.0,
+            4.1, 4.2,
+            4.3, 4.4,
+        },
     });
 }

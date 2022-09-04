@@ -140,6 +140,27 @@ macro_rules! impl_mat_add {
 }
 pub(crate) use impl_mat_add;
 
+/// Implements the [`AddAssign`](std::ops::AddAssign) trait to perform element-wise matrix addition assignment.
+macro_rules! impl_mat_add_assign {
+    ($name:ident { $($r:literal),* }) => {
+        /// Perform element-wise matrix addition assignment.
+        impl std::ops::AddAssign<$name> for $name {
+            fn add_assign(&mut self, other: $name) {
+                $(self[$r] += other[$r];)*
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        /// Perform element-wise matrix addition assignment.
+        impl std::ops::AddAssign<&$name> for $name {
+            fn add_assign(&mut self, other: &$name) {
+                $(self[$r] += other[$r];)*
+            }
+        }
+    };
+}
+pub(crate) use impl_mat_add_assign;
+
 /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
 #[cfg(test)]
 macro_rules! test_mat_new {
@@ -244,3 +265,21 @@ macro_rules! test_mat_add {
 }
 #[cfg(test)]
 pub(crate) use test_mat_add;
+
+/// Creates a test which checks if add-assigning 2 matrices add-assigns all their elements.
+#[cfg(test)]
+macro_rules! test_mat_add_assign {
+    ($name:ident { $($a:ident { $($a_val:literal,)* } += $b:ident { $($b_val:literal,)* },)* }) => {
+        #[test]
+        fn add_assign() { $(
+            let mut $a = $name::new($($a_val),*);
+            let $b = $name::new($($b_val),*);
+            $a += $b;
+            assert_eq!($a, $name::new($($a_val + $b_val),*));
+            $a += &$b;
+            assert_eq!($a, $name::new($($a_val + $b_val + $b_val),*));
+        )* }
+    };
+}
+#[cfg(test)]
+pub(crate) use test_mat_add_assign;
