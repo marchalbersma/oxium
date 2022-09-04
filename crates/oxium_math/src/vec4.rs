@@ -1,4 +1,6 @@
-use crate::macros::{def_vec_struct, impl_vec_add, impl_vec_index, impl_vec_neg, impl_vec_new};
+use crate::macros::{
+    def_vec_struct, impl_vec_add, impl_vec_add_assign, impl_vec_index, impl_vec_neg, impl_vec_new,
+};
 
 def_vec_struct!(Vec4<f32, 4> { x, y, z, w });
 
@@ -10,10 +12,13 @@ impl_vec_neg!(Vec4 { x, y, z, w });
 
 impl_vec_add!(Vec4 { x, y, z, w });
 
+impl_vec_add_assign!(Vec4 { x, y, z, w });
+
 #[cfg(test)]
 mod tests {
     use crate::macros::{
-        test_vec_add, test_vec_index, test_vec_index_out_of_bounds, test_vec_neg, test_vec_new,
+        test_vec_add, test_vec_add_assign, test_vec_index, test_vec_index_out_of_bounds,
+        test_vec_neg, test_vec_new,
     };
     use crate::Vec4;
 
@@ -37,5 +42,10 @@ mod tests {
     test_vec_add!(Vec4 {
         a { 2.8, 2.9, 3.0, 3.1 } + b { -3.2, 3.3, 3.4, -3.5 } = c,
         d { -3.6, 3.7, 3.8, -3.9 } + e { 4.0, 4.1, 4.2, 4.3 } = f,
+    });
+
+    test_vec_add_assign!(Vec4 {
+        a { 4.4, -4.5, -4.6, 4.7 } += b { -4.8, -4.9, 5.0, 5.1 },
+        c { -5.2, 5.3, 5.4, -5.5 } += d { 5.6, 5.7, -5.8, -5.9 },
     });
 }

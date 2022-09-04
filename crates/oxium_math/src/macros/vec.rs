@@ -127,6 +127,27 @@ macro_rules! impl_vec_add {
 }
 pub(crate) use impl_vec_add;
 
+/// Implements the [`AddAssign`](std::ops::AddAssign) trait to perform component-wise vector addition assignment.
+macro_rules! impl_vec_add_assign {
+    ($name:ident { $($comp:ident),* }) => {
+        /// Perform component-wise vector addition assignment.
+        impl std::ops::AddAssign<$name> for $name {
+            fn add_assign(&mut self, other: $name) {
+                $(self.$comp += other.$comp;)*
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        /// Perform component-wise vector addition assignment.
+        impl std::ops::AddAssign<&$name> for $name {
+            fn add_assign(&mut self, other: &$name) {
+                $(self.$comp += other.$comp;)*
+            }
+        }
+    };
+}
+pub(crate) use impl_vec_add_assign;
+
 /// Creates a test which checks if calling the `new()` associated function correctly sets all vector components.
 #[cfg(test)]
 macro_rules! test_vec_new {
@@ -217,3 +238,21 @@ macro_rules! test_vec_add {
 }
 #[cfg(test)]
 pub(crate) use test_vec_add;
+
+/// Creates a test which checks if add-assigning 2 vectors add-assigns all their components.
+#[cfg(test)]
+macro_rules! test_vec_add_assign {
+    ($name:ident { $($a:ident { $($a_val:literal),* } += $b:ident { $($b_val:literal),* },)* }) => {
+        #[test]
+        fn add_assign() { $(
+            let mut $a = $name::new($($a_val),*);
+            let $b = $name::new($($b_val),*);
+            $a += $b;
+            assert_eq!($a, $name::new($($a_val + $b_val),*));
+            $a += &$b;
+            assert_eq!($a, $name::new($($a_val + $b_val + $b_val),*));
+        )* }
+    };
+}
+#[cfg(test)]
+pub(crate) use test_vec_add_assign;
