@@ -315,6 +315,57 @@ macro_rules! mul_assign_impl {
 }
 pub(crate) use mul_assign_impl;
 
+/// Implements the [`Div`](std::ops::Div) trait to perform component-wise vector division.
+macro_rules! div_impl {
+    ($vec:ident<$t:ty, $n:literal> {
+        $([$index:literal] => $comp:ident,)*
+    }) => {
+        impl std::ops::Div<$vec> for $vec {
+            /// The resulting type after dividing 2 vectors.
+            type Output = $vec;
+
+            /// Performs component-wise vector division.
+            fn div(self, other: $vec) -> Self::Output {
+                $vec::new($(self.$comp / other.$comp),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<&$vec> for $vec {
+            /// The resulting type after dividing 2 vectors.
+            type Output = Self;
+
+            /// Performs component-wise vector division.
+            fn div(self, other: &$vec) -> Self::Output {
+                $vec::new($(self.$comp / other.$comp),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<$vec> for &$vec {
+            /// The resulting type after dividing 2 vectors.
+            type Output = $vec;
+
+            /// Performs component-wise vector division.
+            fn div(self, other: $vec) -> Self::Output {
+                $vec::new($(self.$comp / other.$comp),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<&$vec> for &$vec {
+            /// The resulting type after dividing 2 vectors.
+            type Output = $vec;
+
+            /// Performs component-wise vector division.
+            fn div(self, other: &$vec) -> Self::Output {
+                $vec::new($(self.$comp / other.$comp),*)
+            }
+        }
+    }
+}
+pub(crate) use div_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all vector components.
@@ -506,4 +557,23 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use mul_assign_test;
+
+    /// Creates a test which checks if dividing 2 vectors divides all their components.
+    macro_rules! div_test {
+        ($vec:ident<$t:ty, $n:literal> { $(
+            $a:ident { $([$a_index:literal] => $a_comp:ident: $a_val:literal),* },
+            $b:ident { $([$b_index:literal] => $b_comp:ident: $b_val:literal),* },
+        )* }) => {
+            #[test]
+            fn div() { $(
+                let $a = $vec::new($($a_val),*);
+                let $b = $vec::new($($b_val),*);
+                assert_eq!( $a /  $b, $vec::new($($a_val / $b_val),*));
+                assert_eq!( $a / &$b, $vec::new($($a_val / $b_val),*));
+                assert_eq!(&$a /  $b, $vec::new($($a_val / $b_val),*));
+                assert_eq!(&$a / &$b, $vec::new($($a_val / $b_val),*));
+            )* }
+        };
+    }
+    pub(crate) use div_test;
 }

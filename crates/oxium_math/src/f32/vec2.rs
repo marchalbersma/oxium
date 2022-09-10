@@ -29,6 +29,7 @@ vec2!(sub_impl);
 vec2!(sub_assign_impl);
 vec2!(mul_impl);
 vec2!(mul_assign_impl);
+vec2!(div_impl);
 
 #[cfg(test)]
 mod tests {
@@ -64,4 +65,5 @@ mod tests {
     vec2_data!(sub_assign_test);
     vec2_data!(mul_test);
     vec2_data!(mul_assign_test);
+    vec2_data!(div_test);
 }
