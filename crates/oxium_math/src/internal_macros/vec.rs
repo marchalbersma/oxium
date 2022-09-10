@@ -218,6 +218,29 @@ macro_rules! sub_impl {
 }
 pub(crate) use sub_impl;
 
+/// Implements the [`SubAssign`](std::ops::SubAssign) trait to perform component-wise vector subtraction assignment.
+macro_rules! sub_assign_impl {
+    ($vec:ident<$t:ty, $n:literal> {
+        $([$index:literal] => $comp:ident,)*
+    }) => {
+        impl std::ops::SubAssign<$vec> for $vec {
+            /// Performs component-wise vector subtraction assignment.
+            fn sub_assign(&mut self, other: $vec) {
+                $(self.$comp -= other.$comp;)*
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        impl std::ops::SubAssign<&$vec> for $vec {
+            /// Performs component-wise vector subtraction assignment.
+            fn sub_assign(&mut self, other: &$vec) {
+                $(self.$comp -= other.$comp;)*
+            }
+        }
+    };
+}
+pub(crate) use sub_assign_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all vector components.
@@ -352,4 +375,23 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use sub_test;
+
+    /// Creates a test which checks if subtract-assigning 2 vectors subtract-assigns all their components.
+    macro_rules! sub_assign_test {
+        ($vec:ident<$t:ty, $n:literal> { $(
+            $a:ident { $([$a_index:literal] => $a_comp:ident: $a_val:literal),* },
+            $b:ident { $([$b_index:literal] => $b_comp:ident: $b_val:literal),* },
+        )* }) => {
+            #[test]
+            fn sub_assign() { $(
+                let mut $a = $vec::new($($a_val),*);
+                let $b = $vec::new($($b_val),*);
+                $a -= $b;
+                assert_eq!($a, $vec::new($($a_val - $b_val),*));
+                $a -= &$b;
+                assert_eq!($a, $vec::new($($a_val - $b_val - $b_val),*));
+            )* }
+        };
+    }
+    pub(crate) use sub_assign_test;
 }

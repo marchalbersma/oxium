@@ -28,6 +28,7 @@ vec4!(neg_impl);
 vec4!(add_impl);
 vec4!(add_assign_impl);
 vec4!(sub_impl);
+vec4!(sub_assign_impl);
 
 #[cfg(test)]
 mod tests {
@@ -60,4 +61,5 @@ mod tests {
     vec4_data!(add_test);
     vec4_data!(add_assign_test);
     vec4_data!(sub_test);
+    vec4_data!(sub_assign_test);
 }
