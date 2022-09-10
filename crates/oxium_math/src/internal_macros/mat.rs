@@ -307,6 +307,29 @@ macro_rules! mul_impl {
 }
 pub(crate) use mul_impl;
 
+/// Implements the [`MulAssign`](std::ops::MulAssign) trait to perform element-wise matrix multiplication assignment.
+macro_rules! mul_assign_impl {
+    ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> {
+        $([$row:literal] => $row_name:ident: [$($elem_name:ident),*],)*
+    }) => {
+        impl std::ops::MulAssign<$mat> for $mat {
+            /// Performs element-wise matrix multiplication assignment.
+            fn mul_assign(&mut self, other: $mat) {
+                $(self[$row] *= other[$row];)*
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        impl std::ops::MulAssign<&$mat> for $mat {
+            /// Performs element-wise matrix multiplication assignment.
+            fn mul_assign(&mut self, other: &$mat) {
+                $(self[$row] *= other[$row];)*
+            }
+        }
+    };
+}
+pub(crate) use mul_assign_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
@@ -523,4 +546,27 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use mul_test;
+
+    /// Creates a test which checks if multiply-assigning 2 matrices multiply-assigns all their elements.
+    macro_rules! mul_assign_test {
+        ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
+            $a:ident { $(
+                [$a_row:literal] => { $([$a_col:literal]: $a_val:literal),* },
+            )* },
+            $b:ident { $(
+                [$b_row:literal] => { $([$b_col:literal]: $b_val:literal),* },
+            )* },
+        )* }) => {
+            #[test]
+            fn mul_assign() { $(
+                let mut $a = $mat::new($($($a_val),*),*);
+                let $b = $mat::new($($($b_val),*),*);
+                $a *= $b;
+                assert_eq!($a, $mat::new($($($a_val * $b_val),*),*));
+                $a *= &$b;
+                assert_eq!($a, $mat::new($($($a_val * $b_val * $b_val),*),*));
+            )* }
+        };
+    }
+    pub(crate) use mul_assign_test;
 }
