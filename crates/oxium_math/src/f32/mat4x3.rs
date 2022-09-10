@@ -30,6 +30,7 @@ mat4x3!(neg_impl);
 mat4x3!(add_impl);
 mat4x3!(add_assign_impl);
 mat4x3!(sub_impl);
+mat4x3!(sub_assign_impl);
 
 #[cfg(test)]
 mod tests {
@@ -83,4 +84,5 @@ mod tests {
     mat4x3_data!(add_test);
     mat4x3_data!(add_assign_test);
     mat4x3_data!(sub_test);
+    mat4x3_data!(sub_assign_test);
 }

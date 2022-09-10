@@ -233,6 +233,29 @@ macro_rules! sub_impl {
 }
 pub(crate) use sub_impl;
 
+/// Implements the [`SubAssign`](std::ops::SubAssign) trait to perform element-wise matrix subtraction assignment.
+macro_rules! sub_assign_impl {
+    ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> {
+        $([$row:literal] => $row_name:ident: [$($elem_name:ident),*],)*
+    }) => {
+        impl std::ops::SubAssign<$mat> for $mat {
+            /// Performs element-wise matrix subtraction assignment.
+            fn sub_assign(&mut self, other: $mat) {
+                $(self[$row] -= other[$row];)*
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the above impl.
+        impl std::ops::SubAssign<&$mat> for $mat {
+            /// Performs element-wise matrix subtraction assignment.
+            fn sub_assign(&mut self, other: &$mat) {
+                $(self[$row] -= other[$row];)*
+            }
+        }
+    };
+}
+pub(crate) use sub_assign_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
@@ -381,7 +404,7 @@ pub(crate) mod tests {
     }
     pub(crate) use add_assign_test;
 
-    /// Creates a test which checks if adding 2 matrices subtracts all their elements.
+    /// Creates a test which checks if subtracting 2 matrices subtracts all their elements.
     macro_rules! sub_test {
         ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
             $a:ident { $(
@@ -403,4 +426,27 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use sub_test;
+
+    /// Creates a test which checks if subtract-assigning 2 matrices subtract-assigns all their elements.
+    macro_rules! sub_assign_test {
+        ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
+            $a:ident { $(
+                [$a_row:literal] => { $([$a_col:literal]: $a_val:literal),* },
+            )* },
+            $b:ident { $(
+                [$b_row:literal] => { $([$b_col:literal]: $b_val:literal),* },
+            )* },
+        )* }) => {
+            #[test]
+            fn sub_assign() { $(
+                let mut $a = $mat::new($($($a_val),*),*);
+                let $b = $mat::new($($($b_val),*),*);
+                $a -= $b;
+                assert_eq!($a, $mat::new($($($a_val - $b_val),*),*));
+                $a -= &$b;
+                assert_eq!($a, $mat::new($($($a_val - $b_val - $b_val),*),*));
+            )* }
+        };
+    }
+    pub(crate) use sub_assign_test;
 }
