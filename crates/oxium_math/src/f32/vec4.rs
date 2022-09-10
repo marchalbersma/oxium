@@ -27,6 +27,7 @@ vec4!(neg_impl);
 // Binary vector operations
 vec4!(add_impl);
 vec4!(add_assign_impl);
+vec4!(sub_impl);
 
 #[cfg(test)]
 mod tests {
@@ -58,4 +59,5 @@ mod tests {
     // Binary vector operations
     vec4_data!(add_test);
     vec4_data!(add_assign_test);
+    vec4_data!(sub_test);
 }
