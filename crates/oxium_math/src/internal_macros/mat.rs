@@ -256,6 +256,57 @@ macro_rules! sub_assign_impl {
 }
 pub(crate) use sub_assign_impl;
 
+/// Implements the [`Mul`](std::ops::Mul) trait to perform element-wise matrix multiplication.
+macro_rules! mul_impl {
+    ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> {
+        $([$row:literal] => $row_name:ident: [$($elem_name:ident),*],)*
+    }) => {
+        impl std::ops::Mul<$mat> for $mat {
+            /// The resulting type after multiplying 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix multiplication.
+            fn mul(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] * other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Mul<&$mat> for $mat {
+            /// The resulting type after multiplying 2 matrices.
+            type Output = Self;
+
+            /// Performs element-wise matrix multiplication.
+            fn mul(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] * other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Mul<$mat> for &$mat {
+            /// The resulting type after multiplying 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix multiplication.
+            fn mul(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] * other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Mul<&$mat> for &$mat {
+            /// The resulting type after multiplying 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix multiplication.
+            fn mul(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] * other[$row]),*)
+            }
+        }
+    }
+}
+pub(crate) use mul_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
@@ -449,4 +500,27 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use sub_assign_test;
+
+    /// Creates a test which checks if multiplying 2 matrices multiplies all their elements.
+    macro_rules! mul_test {
+        ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
+            $a:ident { $(
+                [$a_row:literal] => { $([$a_col:literal]: $a_val:literal),* },
+            )* },
+            $b:ident { $(
+                [$b_row:literal] => { $([$b_col:literal]: $b_val:literal),* },
+            )* },
+        )* }) => {
+            #[test]
+            fn mul() { $(
+                let $a = $mat::new($($($a_val),*),*);
+                let $b = $mat::new($($($b_val),*),*);
+                assert_eq!( $a *  $b, $mat::new($($($a_val * $b_val),*),*));
+                assert_eq!( $a * &$b, $mat::new($($($a_val * $b_val),*),*));
+                assert_eq!(&$a *  $b, $mat::new($($($a_val * $b_val),*),*));
+                assert_eq!(&$a * &$b, $mat::new($($($a_val * $b_val),*),*));
+            )* }
+        };
+    }
+    pub(crate) use mul_test;
 }

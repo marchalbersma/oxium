@@ -30,6 +30,7 @@ mat3x3!(add_impl);
 mat3x3!(add_assign_impl);
 mat3x3!(sub_impl);
 mat3x3!(sub_assign_impl);
+mat3x3!(mul_impl);
 
 #[cfg(test)]
 mod tests {
@@ -80,4 +81,5 @@ mod tests {
     mat3x3_data!(add_assign_test);
     mat3x3_data!(sub_test);
     mat3x3_data!(sub_assign_test);
+    mat3x3_data!(mul_test);
 }
