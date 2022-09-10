@@ -330,6 +330,57 @@ macro_rules! mul_assign_impl {
 }
 pub(crate) use mul_assign_impl;
 
+/// Implements the [`Div`](std::ops::Div) trait to perform element-wise matrix division.
+macro_rules! div_impl {
+    ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> {
+        $([$row:literal] => $row_name:ident: [$($elem_name:ident),*],)*
+    }) => {
+        impl std::ops::Div<$mat> for $mat {
+            /// The resulting type after dividing 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix division.
+            fn div(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] / other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<&$mat> for $mat {
+            /// The resulting type after dividing 2 matrices.
+            type Output = Self;
+
+            /// Performs element-wise matrix division.
+            fn div(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] / other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<$mat> for &$mat {
+            /// The resulting type after dividing 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix division.
+            fn div(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] / other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Div<&$mat> for &$mat {
+            /// The resulting type after dividing 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix division.
+            fn div(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] / other[$row]),*)
+            }
+        }
+    }
+}
+pub(crate) use div_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
@@ -569,4 +620,27 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use mul_assign_test;
+
+    /// Creates a test which checks if dividing 2 matrices divides all their elements.
+    macro_rules! div_test {
+        ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
+            $a:ident { $(
+                [$a_row:literal] => { $([$a_col:literal]: $a_val:literal),* },
+            )* },
+            $b:ident { $(
+                [$b_row:literal] => { $([$b_col:literal]: $b_val:literal),* },
+            )* },
+        )* }) => {
+            #[test]
+            fn div() { $(
+                let $a = $mat::new($($($a_val),*),*);
+                let $b = $mat::new($($($b_val),*),*);
+                assert_eq!( $a /  $b, $mat::new($($($a_val / $b_val),*),*));
+                assert_eq!( $a / &$b, $mat::new($($($a_val / $b_val),*),*));
+                assert_eq!(&$a /  $b, $mat::new($($($a_val / $b_val),*),*));
+                assert_eq!(&$a / &$b, $mat::new($($($a_val / $b_val),*),*));
+            )* }
+        };
+    }
+    pub(crate) use div_test;
 }
