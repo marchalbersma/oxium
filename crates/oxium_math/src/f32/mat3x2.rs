@@ -28,6 +28,7 @@ mat3x2!(neg_impl);
 // Binary matrix operations
 mat3x2!(add_impl);
 mat3x2!(add_assign_impl);
+mat3x2!(sub_impl);
 
 #[cfg(test)]
 mod tests {
@@ -76,4 +77,5 @@ mod tests {
     // Binary vector operations
     mat3x2_data!(add_test);
     mat3x2_data!(add_assign_test);
+    mat3x2_data!(sub_test);
 }

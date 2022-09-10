@@ -182,6 +182,57 @@ macro_rules! add_assign_impl {
 }
 pub(crate) use add_assign_impl;
 
+/// Implements the [`Sub`](std::ops::Sub) trait to perform element-wise matrix subtraction.
+macro_rules! sub_impl {
+    ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> {
+        $([$row:literal] => $row_name:ident: [$($elem_name:ident),*],)*
+    }) => {
+        impl std::ops::Sub<$mat> for $mat {
+            /// The resulting type after subtracting 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix subtraction.
+            fn sub(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] - other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Sub<&$mat> for $mat {
+            /// The resulting type after subtracting 2 matrices.
+            type Output = Self;
+
+            /// Performs element-wise matrix subtraction.
+            fn sub(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] - other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Sub<$mat> for &$mat {
+            /// The resulting type after subtracting 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix subtraction.
+            fn sub(self, other: $mat) -> Self::Output {
+                $mat::from_rows($(self[$row] - other[$row]),*)
+            }
+        }
+
+        // TODO: remove duplicate code by placing a custom attribute macro on the first impl.
+        impl std::ops::Sub<&$mat> for &$mat {
+            /// The resulting type after subtracting 2 matrices.
+            type Output = $mat;
+
+            /// Performs element-wise matrix subtraction.
+            fn sub(self, other: &$mat) -> Self::Output {
+                $mat::from_rows($(self[$row] - other[$row]),*)
+            }
+        }
+    }
+}
+pub(crate) use sub_impl;
+
 #[cfg(test)]
 pub(crate) mod tests {
     /// Creates a test which checks if calling the `new()` associated function correctly sets all matrix elements.
@@ -329,4 +380,27 @@ pub(crate) mod tests {
         };
     }
     pub(crate) use add_assign_test;
+
+    /// Creates a test which checks if adding 2 matrices subtracts all their elements.
+    macro_rules! sub_test {
+        ($mat:ident<$r:literal, $vec:ident<$t:ty, $c:literal>> { $(
+            $a:ident { $(
+                [$a_row:literal] => { $([$a_col:literal]: $a_val:literal),* },
+            )* },
+            $b:ident { $(
+                [$b_row:literal] => { $([$b_col:literal]: $b_val:literal),* },
+            )* },
+        )* }) => {
+            #[test]
+            fn sub() { $(
+                let $a = $mat::new($($($a_val),*),*);
+                let $b = $mat::new($($($b_val),*),*);
+                assert_eq!( $a -  $b, $mat::new($($($a_val - $b_val),*),*));
+                assert_eq!( $a - &$b, $mat::new($($($a_val - $b_val),*),*));
+                assert_eq!(&$a -  $b, $mat::new($($($a_val - $b_val),*),*));
+                assert_eq!(&$a - &$b, $mat::new($($($a_val - $b_val),*),*));
+            )* }
+        };
+    }
+    pub(crate) use sub_test;
 }
