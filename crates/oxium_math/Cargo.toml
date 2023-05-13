@@ -1,0 +1,8 @@
+[package]
+name = "oxium_math"
+version = "0.1.0"
+edition = "2021"
+repository = "https://github.com/marchalbersma/oxium"
+license = "Apache-2.0 OR MIT"
+keywords = ["oxium", "game-engine", "math"]
+categories = ["game-engines", "mathematics"]
