@@ -6,3 +6,7 @@ repository = "https://github.com/marchalbersma/oxium"
 license = "Apache-2.0 OR MIT"
 keywords = ["oxium", "game-engine", "math"]
 categories = ["game-engines", "mathematics"]
+
+[build-dependencies]
+askama = "0.12.0"
+rand = "0.8.5"

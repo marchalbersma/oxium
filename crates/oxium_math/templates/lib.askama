@@ -1,0 +1,7 @@
+{%- for mod_name in mod_names -%}
+    pub use {{ mod_name }}::*;
+{%~ endfor %}
+
+{%~ for mod_name in mod_names -%}
+    mod {{ mod_name }};
+{%~ endfor %}

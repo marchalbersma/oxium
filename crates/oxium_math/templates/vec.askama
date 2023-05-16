@@ -1,0 +1,40 @@
+/// A {{ comp_count }}-dimensional vector with [`{{ comp_ty }}`] components.
+pub struct {{ struct_name }} {
+    {%- for comp_name in comp_names %}
+        /// The {{ comp_name }}-component of the vector.
+        pub {{ comp_name }}: {{ comp_ty }},
+    {%- endfor %}
+}
+
+impl {{ struct_name }} {
+    /// Creates a new {{ comp_count }}-dimensional vector from the given components.
+    pub const fn new(
+        {%- for comp_name in comp_names -%}
+            {{ comp_name }}: {{ comp_ty }},
+        {%- endfor -%}
+    ) -> Self {
+        Self {
+            {%- for comp_name in comp_names -%}
+                {{ comp_name }},
+            {%- endfor -%}
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{{ struct_name }};
+
+    #[test]
+    fn new() {
+        let vec = {{ struct_name }}::new(
+            {%- for comp in 0..comp_count -%}
+                {{ test_data_new[loop.index0] }},
+            {%- endfor -%}
+        );
+
+        {%~ for comp_name in comp_names %}
+            assert_eq!(vec.{{ comp_name }}, {{ test_data_new[loop.index0] }});
+        {%- endfor %}
+    }
+}
