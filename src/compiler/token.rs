@@ -1,6 +1,6 @@
 use crate::compiler::span::Span;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TokenKind<'a> {
     Func,
     Ident(&'a str),
