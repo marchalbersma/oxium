@@ -1,6 +1,8 @@
+pub mod analyzer;
 pub mod ast;
 pub mod cursor;
 pub mod lexer;
 pub mod parser;
 pub mod span;
+pub mod symbol;
 pub mod token;
