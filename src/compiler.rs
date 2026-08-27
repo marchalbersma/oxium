@@ -1,4 +1,5 @@
 pub mod analyzer;
+pub mod asm;
 pub mod ast;
 pub mod cursor;
 pub mod lexer;

@@ -1,4 +1,5 @@
 use crate::compiler::analyzer::Analyzer;
+use crate::compiler::asm::generator::Generator;
 use crate::compiler::parser::Parser;
 use std::fs;
 
@@ -16,4 +17,9 @@ fn main() {
     let symbols = analyzer.analyze();
 
     println!("Functions: {:?}", symbols.funcs());
+
+    let asm_generator = Generator;
+    let asm_file = asm_generator.generate();
+
+    println!("Assembly AST: {:?}", asm_file);
 }
