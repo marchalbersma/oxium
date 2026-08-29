@@ -1,6 +1,10 @@
-use crate::compiler::ast::{BlockExpr, Decl, File, FuncDecl, FuncSig, Ident};
+use crate::compiler::ast::{
+    BlockExpr, CallExpr, Decl, Expr, ExternDecl, ExternFuncDecl, File, FuncDecl, FuncSig, Ident,
+    Int, Lit, Param,
+};
 use crate::compiler::lexer::Lexer;
 use crate::compiler::span::Span;
+use crate::compiler::token;
 use crate::compiler::token::{Token, TokenKind};
 
 pub struct Parser<'a> {
@@ -32,10 +36,42 @@ impl<'a> Parser<'a> {
 
     fn parse_decl(&mut self) -> Decl {
         match self.kind() {
+            Some(TokenKind::Extern) => Decl::Extern(self.parse_extern_decl()),
             Some(TokenKind::Func) => Decl::Func(self.parse_func_decl()),
 
             kind => panic!("Expected Decl, found {:?}", kind),
         }
+    }
+
+    fn parse_extern_decl(&mut self) -> ExternDecl {
+        let ext = self.expect(TokenKind::Extern);
+        self.expect(TokenKind::OpenBrace);
+
+        let mut funcs = Vec::new();
+
+        self.skip_newlines();
+
+        while self.kind() != Some(&TokenKind::CloseBrace) {
+            funcs.push(self.parse_extern_func_decl());
+
+            self.skip_newlines();
+        }
+
+        let close_brace = self.expect(TokenKind::CloseBrace);
+
+        let span = ext.span.join(close_brace.span);
+
+        ExternDecl { funcs, span }
+    }
+
+    fn parse_extern_func_decl(&mut self) -> ExternFuncDecl {
+        let func = self.expect(TokenKind::Func);
+        let name = self.parse_ident();
+        let sig = self.parse_func_sig();
+
+        let span = func.span.join(sig.span);
+
+        ExternFuncDecl { name, sig, span }
     }
 
     fn parse_func_decl(&mut self) -> FuncDecl {
@@ -54,28 +90,119 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_expr(&mut self) -> Expr {
+        match self.kind() {
+            Some(TokenKind::OpenBrace) => Expr::Block(self.parse_block_expr()),
+            Some(TokenKind::Ident(_)) => Expr::Call(self.parse_call_expr()),
+
+            kind => panic!("Expected Decl, found {:?}", kind),
+        }
+    }
+
     fn parse_block_expr(&mut self) -> BlockExpr {
         let open_brace = self.expect(TokenKind::OpenBrace);
+
+        let mut expressions = Vec::new();
+
+        self.skip_newlines();
+
+        while self.kind() != Some(&TokenKind::CloseBrace) {
+            expressions.push(self.parse_expr());
+
+            self.skip_newlines();
+        }
+
         let close_brace = self.expect(TokenKind::CloseBrace);
 
-        BlockExpr {
-            span: open_brace.span.join(close_brace.span),
+        let span = open_brace.span.join(close_brace.span);
+
+        BlockExpr { expressions, span }
+    }
+
+    fn parse_call_expr(&mut self) -> CallExpr {
+        let name = self.parse_ident();
+        self.expect(TokenKind::OpenParen);
+
+        let mut args = Vec::new();
+
+        self.skip_newlines();
+
+        while self.kind() != Some(&TokenKind::CloseParen) {
+            args.push(self.parse_lit());
+
+            if self.kind() == Some(&TokenKind::Comma) {
+                self.consume();
+                self.skip_newlines();
+            } else {
+                break;
+            }
         }
+
+        self.skip_newlines();
+
+        let close_paren = self.expect(TokenKind::CloseParen);
+
+        let span = name.span.join(close_paren.span);
+
+        CallExpr { name, args, span }
     }
 
     fn parse_func_sig(&mut self) -> FuncSig {
         let open_paren = self.expect(TokenKind::OpenParen);
+
+        let mut params = Vec::new();
+
+        self.skip_newlines();
+
+        while self.kind() != Some(&TokenKind::CloseParen) {
+            params.push(self.parse_param());
+
+            if self.kind() == Some(&TokenKind::Comma) {
+                self.consume();
+                self.skip_newlines();
+            } else {
+                break;
+            }
+        }
+
+        self.skip_newlines();
+
         let close_paren = self.expect(TokenKind::CloseParen);
 
-        FuncSig {
-            span: open_paren.span.join(close_paren.span),
-        }
+        let span = open_paren.span.join(close_paren.span);
+
+        FuncSig { params, span }
+    }
+
+    fn parse_param(&mut self) -> Param {
+        let name = self.parse_ident();
+        self.expect(TokenKind::Colon);
+        let ty = self.parse_ident();
+
+        let span = name.span.join(ty.span);
+
+        Param { name, ty, span }
     }
 
     fn parse_ident(&mut self) -> Ident {
         let (value, span) = self.expect_ident();
 
         Ident { value, span }
+    }
+
+    fn parse_lit(&mut self) -> Lit {
+        let lit = match self.kind() {
+            Some(TokenKind::Int(int)) => match int {
+                token::Int::Signed(val) => Lit::Int(Int::Signed(*val)),
+                token::Int::Unsigned(val) => Lit::Int(Int::Unsigned(*val)),
+            },
+
+            kind => panic!("Expected Int, found {:?}", kind),
+        };
+
+        self.consume();
+
+        lit
     }
 
     fn expect(&mut self, expected: TokenKind<'a>) -> Token<'a> {

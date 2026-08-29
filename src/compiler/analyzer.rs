@@ -24,6 +24,7 @@ impl Analyzer {
     fn resolve_names(&mut self) {
         for decl in &self.file.decls {
             match decl {
+                Decl::Extern(_) => {}
                 Decl::Func(func) => {
                     self.symbols.insert_func(func.clone());
                 }

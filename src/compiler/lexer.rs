@@ -1,6 +1,6 @@
 use crate::compiler::cursor::Cursor;
 use crate::compiler::span::Span;
-use crate::compiler::token::{Token, TokenKind};
+use crate::compiler::token::{Int, Token, TokenKind};
 
 pub struct Lexer<'a> {
     src: &'a str,
@@ -60,7 +60,25 @@ impl<'a> Iterator for Lexer<'a> {
 
             b')' => self.token(TokenKind::CloseParen, start),
 
+            b':' => self.token(TokenKind::Colon, start),
+
+            b',' => self.token(TokenKind::Comma, start),
+
             b'\n' => self.token(TokenKind::Newline, start),
+
+            byte if byte == b'-' || byte.is_ascii_digit() => {
+                self.consume_while(|byte| byte.is_ascii_digit());
+
+                let str = &self.src[start..self.cursor.pos];
+
+                let int = if byte == b'-' {
+                    Int::Signed(str.parse::<i64>().unwrap())
+                } else {
+                    Int::Unsigned(str.parse::<u64>().unwrap())
+                };
+
+                self.token(TokenKind::Int(int), start)
+            }
 
             byte if Self::is_ident_start(byte) => {
                 self.consume_while(Self::is_ident_continue);
@@ -68,6 +86,7 @@ impl<'a> Iterator for Lexer<'a> {
                 let ident = &self.src[start..self.cursor.pos];
 
                 match ident {
+                    "extern" => self.token(TokenKind::Extern, start),
                     "func" => self.token(TokenKind::Func, start),
                     _ => self.token(TokenKind::Ident(ident), start),
                 }
