@@ -40,9 +40,9 @@ impl<'a> Compiler<'a> {
         let src = fs::read_to_string(src_path)?;
 
         let file = self.parse(&src);
-        self.analyze(file);
+        let symbols = self.analyze(file);
 
-        let asm = self.generate_asm();
+        let asm = self.generate_asm(symbols);
 
         fs::create_dir_all(self.build_dir)?;
         fs::write(&asm_path, asm)?;
@@ -84,8 +84,8 @@ impl<'a> Compiler<'a> {
         symbols
     }
 
-    fn generate_asm(&self) -> String {
-        let generator = Generator;
+    fn generate_asm(&self, symbols: SymbolTable) -> String {
+        let generator = Generator::new(symbols);
         let file = generator.generate();
 
         if self.debug {
