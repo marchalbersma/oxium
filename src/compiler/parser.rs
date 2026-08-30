@@ -1,6 +1,5 @@
 use crate::compiler::ast::{
-    BlockExpr, CallExpr, Decl, Expr, ExternDecl, ExternFuncDecl, File, FuncDecl, FuncSig, Ident,
-    Int, Lit, Param,
+    BlockExpr, CallExpr, Decl, Expr, ExternDecl, File, FuncDecl, FuncSig, Ident, Int, Lit, Param,
 };
 use crate::compiler::lexer::Lexer;
 use crate::compiler::span::Span;
@@ -52,7 +51,7 @@ impl<'a> Parser<'a> {
         self.skip_newlines();
 
         while self.kind() != Some(&TokenKind::CloseBrace) {
-            funcs.push(self.parse_extern_func_decl());
+            funcs.push(self.parse_func_decl());
 
             self.skip_newlines();
         }
@@ -64,23 +63,19 @@ impl<'a> Parser<'a> {
         ExternDecl { funcs, span }
     }
 
-    fn parse_extern_func_decl(&mut self) -> ExternFuncDecl {
-        let func = self.expect(TokenKind::Func);
-        let name = self.parse_ident();
-        let sig = self.parse_func_sig();
-
-        let span = func.span.join(sig.span);
-
-        ExternFuncDecl { name, sig, span }
-    }
-
     fn parse_func_decl(&mut self) -> FuncDecl {
         let func = self.expect(TokenKind::Func);
         let name = self.parse_ident();
         let sig = self.parse_func_sig();
-        let body = self.parse_block_expr();
 
-        let span = func.span.join(body.span);
+        let (body, span) = if self.kind() == Some(&TokenKind::OpenBrace) {
+            let body = self.parse_block_expr();
+            let span = func.span.join(body.span);
+
+            (Some(body), span)
+        } else {
+            (None, func.span.join(sig.span))
+        };
 
         FuncDecl {
             name,

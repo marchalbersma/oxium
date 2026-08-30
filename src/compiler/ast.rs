@@ -13,14 +13,7 @@ pub enum Decl {
 
 #[derive(Clone, Debug)]
 pub struct ExternDecl {
-    pub funcs: Vec<ExternFuncDecl>,
-    pub span: Span,
-}
-
-#[derive(Clone, Debug)]
-pub struct ExternFuncDecl {
-    pub name: Ident,
-    pub sig: FuncSig,
+    pub funcs: Vec<FuncDecl>,
     pub span: Span,
 }
 
@@ -28,7 +21,7 @@ pub struct ExternFuncDecl {
 pub struct FuncDecl {
     pub name: Ident,
     pub sig: FuncSig,
-    pub body: BlockExpr,
+    pub body: Option<BlockExpr>,
     pub span: Span,
 }
 

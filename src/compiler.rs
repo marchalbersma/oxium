@@ -67,7 +67,7 @@ impl<'a> Compiler<'a> {
         let file = parser.parse();
 
         if self.debug {
-            println!("AST: {:?}", file);
+            println!("AST: {:?}\n", file);
         }
 
         file
@@ -78,7 +78,7 @@ impl<'a> Compiler<'a> {
         let symbols = analyzer.analyze();
 
         if self.debug {
-            println!("Functions: {:?}", symbols.funcs());
+            println!("Functions: {:?}\n", symbols.funcs(),);
         }
 
         symbols
@@ -89,7 +89,7 @@ impl<'a> Compiler<'a> {
         let file = generator.generate();
 
         if self.debug {
-            println!("Assembly AST: {:?}", file);
+            println!("Assembly AST: {:?}\n", file);
         }
 
         Writer::write(&file)

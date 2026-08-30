@@ -8,7 +8,7 @@ pub struct SymbolTable {
 }
 
 impl SymbolTable {
-    pub fn insert_func(&mut self, decl: FuncDecl) {
+    pub fn insert_func(&mut self, ext: bool, decl: FuncDecl) {
         if self.func_map.contains_key(&decl.name.value) {
             panic!("Duplicate function {:?}", decl.name.value);
         }
@@ -16,7 +16,7 @@ impl SymbolTable {
         let id = self.funcs.len();
         let name = decl.name.value.clone();
 
-        self.funcs.push(FuncSymbol { id, decl });
+        self.funcs.push(FuncSymbol { id, ext, decl });
         self.func_map.insert(name, id);
     }
 
@@ -33,5 +33,6 @@ impl SymbolTable {
 #[derive(Clone, Debug)]
 pub struct FuncSymbol {
     pub id: usize,
+    pub ext: bool,
     pub decl: FuncDecl,
 }
