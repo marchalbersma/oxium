@@ -1,9 +1,10 @@
 use crate::compiler::asm::ast::{
-    Block, Call, Directive, File, Immediate, Instruction, Mov, Operand, Register, Section,
+    Add, Block, Call, Directive, File, Immediate, Instruction, Mov, Operand, Register, Section,
     SectionKind, Sub, Symbol,
 };
-use crate::compiler::ast::{Expr, Int, Lit};
+use crate::compiler::ast::{BlockExpr, CallExpr, Expr, FuncDecl, Int, Lit};
 use crate::compiler::symbol::{FuncSymbol, SymbolTable};
+use std::vec;
 
 pub struct Generator {
     symbols: SymbolTable,
@@ -17,98 +18,163 @@ impl Generator {
     }
 
     pub fn generate(&self) -> File {
-        let mut file = File {
-            directives: Vec::new(),
-            sections: Vec::new(),
-        };
-
-        self.generate_global_directives(&mut file);
-        self.generate_extern_directives(&mut file);
-
-        self.generate_entry_point(&mut file);
-
-        file
+        File {
+            directives: self.directives(),
+            sections: self.sections(),
+        }
     }
 
-    fn generate_global_directives(&self, file: &mut File) {
-        let symbol = Symbol {
-            value: Self::ENTRY.into(),
-        };
+    fn directives(&self) -> Vec<Directive> {
+        let mut directives = Vec::new();
 
-        file.directives.push(Directive::Global(symbol));
-    }
+        directives.push(self.entry_directive());
 
-    fn generate_extern_directives(&self, file: &mut File) {
-        let funcs: Vec<&FuncSymbol> = self
+        let extern_funcs: Vec<&FuncSymbol> = self
             .symbols
             .funcs()
             .iter()
             .filter(|func| func.ext)
             .collect();
 
-        for func in funcs {
-            let symbol = Symbol {
-                value: func.decl.name.value.clone(),
-            };
-
-            file.directives.push(Directive::Extern(symbol));
+        for func in extern_funcs {
+            directives.push(self.extern_directive(&func.decl));
         }
+
+        directives
     }
 
-    fn generate_entry_point(&self, file: &mut File) {
-        let mut instructions = vec![Instruction::Sub(Sub {
-            dest: Operand::Register(Register::Rsp),
-            src: Operand::Immediate(Immediate::Signed(40)),
-        })];
+    fn entry_directive(&self) -> Directive {
+        Directive::Global(Symbol {
+            value: Self::ENTRY.into(),
+        })
+    }
 
-        let main_func: &FuncSymbol = self
+    fn extern_directive(&self, func: &FuncDecl) -> Directive {
+        Directive::Extern(Symbol {
+            value: func.name.value.clone(),
+        })
+    }
+
+    fn sections(&self) -> Vec<Section> {
+        vec![self.text_section()]
+    }
+
+    fn text_section(&self) -> Section {
+        let kind = SectionKind::Text;
+        let mut blocks = Vec::new();
+
+        blocks.push(self.entry_block());
+
+        let funcs: Vec<&FuncSymbol> = self
             .symbols
             .funcs()
             .iter()
-            .find(|func| func.decl.name.value == "main")
-            .unwrap();
+            .filter(|func| !func.ext)
+            .collect();
 
-        if let Some(body) = &main_func.decl.body {
-            for expr in &body.expressions {
-                match expr {
-                    Expr::Call(call) => {
-                        for arg in &call.args {
-                            let src = match arg {
-                                Lit::Int(int) => match int {
-                                    Int::Signed(value) => {
-                                        Operand::Immediate(Immediate::Signed(*value))
-                                    }
-                                    Int::Unsigned(value) => {
-                                        Operand::Immediate(Immediate::Unsigned(*value))
-                                    }
-                                },
-                            };
+        for func in funcs {
+            blocks.push(self.func_block(&func.decl));
+        }
 
-                            instructions.push(Instruction::Mov(Mov {
-                                dest: Operand::Register(Register::Rcx),
-                                src,
-                            }))
-                        }
+        Section { kind, blocks }
+    }
 
-                        instructions.push(Instruction::Call(Call {
-                            target: Operand::Symbol(Symbol {
-                                value: call.name.value.clone(),
-                            }),
-                        }))
-                    }
-                    expr => panic!("Unsupported expression: {:?}", expr),
-                }
+    fn entry_block(&self) -> Block {
+        let mut instructions = Vec::new();
+
+        instructions.append(&mut self.func_prologue());
+        instructions.push(Instruction::Call(Call {
+            target: Operand::Symbol(Symbol {
+                value: "main".to_string(),
+            }),
+        }));
+
+        Block {
+            label: Symbol {
+                value: Self::ENTRY.into(),
+            },
+            instructions,
+        }
+    }
+
+    fn func_block(&self, func: &FuncDecl) -> Block {
+        let label = Symbol {
+            value: func.name.value.clone(),
+        };
+
+        let mut instructions = Vec::new();
+
+        instructions.append(&mut self.func_prologue());
+
+        if let Some(body) = &func.body {
+            instructions.append(&mut self.block_expr(body));
+        }
+
+        instructions.append(&mut self.func_epilogue());
+        instructions.push(Instruction::Ret);
+
+        Block {
+            label,
+            instructions,
+        }
+    }
+
+    fn func_prologue(&self) -> Vec<Instruction> {
+        vec![Instruction::Sub(Sub {
+            dest: Operand::Register(Register::Rsp),
+            src: Operand::Immediate(Immediate::Unsigned(40)),
+        })]
+    }
+
+    fn func_epilogue(&self) -> Vec<Instruction> {
+        vec![Instruction::Add(Add {
+            dest: Operand::Register(Register::Rsp),
+            src: Operand::Immediate(Immediate::Unsigned(40)),
+        })]
+    }
+
+    fn block_expr(&self, block: &BlockExpr) -> Vec<Instruction> {
+        let mut instructions = Vec::new();
+
+        for expr in &block.expressions {
+            instructions.append(&mut match expr {
+                Expr::Call(call) => self.call_expr(call),
+                expr => panic!("Expected Call, found {:?}", expr),
+            });
+        }
+
+        instructions
+    }
+
+    fn call_expr(&self, call: &CallExpr) -> Vec<Instruction> {
+        let mut instructions = Vec::new();
+
+        for arg in &call.args {
+            let src = match arg {
+                Expr::Ident(_) => None,
+                Expr::Lit(lit) => Some(match lit {
+                    Lit::Int(int) => match int {
+                        Int::Signed(value) => Operand::Immediate(Immediate::Signed(*value)),
+                        Int::Unsigned(value) => Operand::Immediate(Immediate::Unsigned(*value)),
+                    },
+                }),
+                expr => panic!("Expected Ident or Lit, found {:?}", expr),
+            };
+
+            if let Some(src) = src {
+                instructions.push(Instruction::Mov(Mov {
+                    dest: Operand::Register(Register::Rcx),
+                    src,
+                }))
             }
         }
 
-        file.sections.push(Section {
-            kind: SectionKind::Text,
-            blocks: vec![Block {
-                label: Symbol {
-                    value: Self::ENTRY.into(),
-                },
-                instructions,
-            }],
-        })
+        instructions.push(Instruction::Call(Call {
+            target: Operand::Symbol(Symbol {
+                value: call.name.value.clone(),
+            }),
+        }));
+
+        instructions
     }
 }

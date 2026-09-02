@@ -31,7 +31,9 @@ pub struct Block {
 pub enum Instruction {
     Call(Call),
     Mov(Mov),
+    Add(Add),
     Sub(Sub),
+    Ret,
 }
 
 #[derive(Clone, Debug)]
@@ -41,6 +43,12 @@ pub struct Call {
 
 #[derive(Clone, Debug)]
 pub struct Mov {
+    pub dest: Operand,
+    pub src: Operand,
+}
+
+#[derive(Clone, Debug)]
+pub struct Add {
     pub dest: Operand,
     pub src: Operand,
 }

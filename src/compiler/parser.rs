@@ -88,9 +88,8 @@ impl<'a> Parser<'a> {
     fn parse_expr(&mut self) -> Expr {
         match self.kind() {
             Some(TokenKind::OpenBrace) => Expr::Block(self.parse_block_expr()),
-            Some(TokenKind::Ident(_)) => Expr::Call(self.parse_call_expr()),
-
-            kind => panic!("Expected Decl, found {:?}", kind),
+            Some(TokenKind::Ident(_)) => self.parse_ident_or_call_expr(),
+            _ => Expr::Lit(self.parse_lit()),
         }
     }
 
@@ -114,32 +113,40 @@ impl<'a> Parser<'a> {
         BlockExpr { expressions, span }
     }
 
-    fn parse_call_expr(&mut self) -> CallExpr {
+    fn parse_ident_or_call_expr(&mut self) -> Expr {
         let name = self.parse_ident();
-        self.expect(TokenKind::OpenParen);
 
-        let mut args = Vec::new();
+        if self.kind() == Some(&TokenKind::OpenParen) {
+            self.consume();
 
-        self.skip_newlines();
+            let mut args = Vec::new();
 
-        while self.kind() != Some(&TokenKind::CloseParen) {
-            args.push(self.parse_lit());
+            self.skip_newlines();
 
-            if self.kind() == Some(&TokenKind::Comma) {
-                self.consume();
-                self.skip_newlines();
-            } else {
-                break;
+            while self.kind() != Some(&TokenKind::CloseParen) {
+                args.push(self.parse_expr());
+
+                if self.kind() == Some(&TokenKind::Comma) {
+                    self.consume();
+                    self.skip_newlines();
+                } else {
+                    break;
+                }
             }
+
+            self.skip_newlines();
+
+            let close_paren = self.expect(TokenKind::CloseParen);
+
+            let span = name.span.join(close_paren.span);
+
+            Expr::Call(CallExpr { name, args, span })
+        } else {
+            Expr::Ident(Ident {
+                value: name.value,
+                span: name.span,
+            })
         }
-
-        self.skip_newlines();
-
-        let close_paren = self.expect(TokenKind::CloseParen);
-
-        let span = name.span.join(close_paren.span);
-
-        CallExpr { name, args, span }
     }
 
     fn parse_func_sig(&mut self) -> FuncSig {

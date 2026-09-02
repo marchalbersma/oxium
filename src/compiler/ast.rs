@@ -29,6 +29,8 @@ pub struct FuncDecl {
 pub enum Expr {
     Block(BlockExpr),
     Call(CallExpr),
+    Ident(Ident),
+    Lit(Lit),
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +42,7 @@ pub struct BlockExpr {
 #[derive(Clone, Debug)]
 pub struct CallExpr {
     pub name: Ident,
-    pub args: Vec<Lit>,
+    pub args: Vec<Expr>,
     pub span: Span,
 }
 

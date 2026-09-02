@@ -35,9 +35,14 @@ impl Writer {
 
         asm.push_str(&format!("section .{}\n\n", name));
 
-        for block in &section.blocks {
-            asm.push_str(&Self::write_block(block));
-        }
+        let blocks = section
+            .blocks
+            .iter()
+            .map(Self::write_block)
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        asm.push_str(&blocks);
 
         asm
     }
@@ -66,6 +71,13 @@ impl Writer {
                     Self::write_operand(&mov.src),
                 )
             }
+            Instruction::Add(add) => {
+                format!(
+                    "add {}, {}",
+                    Self::write_operand(&add.dest),
+                    Self::write_operand(&add.src),
+                )
+            }
             Instruction::Sub(sub) => {
                 format!(
                     "sub {}, {}",
@@ -73,6 +85,7 @@ impl Writer {
                     Self::write_operand(&sub.src),
                 )
             }
+            Instruction::Ret => "ret".to_string(),
         }
     }
 
