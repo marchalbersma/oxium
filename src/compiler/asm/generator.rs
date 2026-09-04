@@ -2,7 +2,7 @@ use crate::compiler::asm::ast::{
     Add, Block, Call, Directive, File, Immediate, Instruction, Mov, Operand, Register, Section,
     SectionKind, Sub, Symbol,
 };
-use crate::compiler::ast::{BlockExpr, CallExpr, Expr, FuncDecl, Int, Lit};
+use crate::compiler::parser::ast::{BlockExpr, CallExpr, Expr, FuncDecl, Int, Stmt};
 use crate::compiler::symbol::{FuncSymbol, SymbolTable};
 use std::vec;
 
@@ -136,10 +136,12 @@ impl Generator {
     fn block_expr(&self, block: &BlockExpr) -> Vec<Instruction> {
         let mut instructions = Vec::new();
 
-        for expr in &block.expressions {
-            instructions.append(&mut match expr {
-                Expr::Call(call) => self.call_expr(call),
-                expr => panic!("Expected Call, found {:?}", expr),
+        for stmt in &block.stmts {
+            instructions.append(&mut match stmt {
+                Stmt::Expr(expr) => match expr {
+                    Expr::Call(call) => self.call_expr(call),
+                    expr => panic!("Expected Call, found {:?}", expr),
+                },
             });
         }
 
@@ -152,13 +154,11 @@ impl Generator {
         for arg in &call.args {
             let src = match arg {
                 Expr::Ident(_) => None,
-                Expr::Lit(lit) => Some(match lit {
-                    Lit::Int(int) => match int {
-                        Int::Signed(value) => Operand::Immediate(Immediate::Signed(*value)),
-                        Int::Unsigned(value) => Operand::Immediate(Immediate::Unsigned(*value)),
-                    },
+                Expr::Int(int) => Some(match int {
+                    Int::Signed(value) => Operand::Immediate(Immediate::Signed(*value)),
+                    Int::Unsigned(value) => Operand::Immediate(Immediate::Unsigned(*value)),
                 }),
-                expr => panic!("Expected Ident or Lit, found {:?}", expr),
+                expr => panic!("Expected Ident or Int, found {:?}", expr),
             };
 
             if let Some(src) = src {

@@ -1,4 +1,4 @@
-use crate::compiler::ast::FuncDecl;
+use crate::compiler::parser::ast::FuncDecl;
 use std::collections::HashMap;
 
 #[derive(Clone, Default)]

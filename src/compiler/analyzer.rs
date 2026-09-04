@@ -1,4 +1,4 @@
-use crate::compiler::ast::{Decl, File};
+use crate::compiler::parser::ast::{Decl, File};
 use crate::compiler::symbol::SymbolTable;
 
 pub struct Analyzer {

@@ -1,22 +1,22 @@
-use crate::compiler::ast::{
-    BlockExpr, CallExpr, Decl, Expr, ExternDecl, File, FuncDecl, FuncSig, Ident, Int, Lit, Param,
-};
 use crate::compiler::lexer::Lexer;
-use crate::compiler::span::Span;
-use crate::compiler::token;
-use crate::compiler::token::{Token, TokenKind};
+use crate::compiler::lexer::token::{Token, TokenKind};
+use crate::compiler::parser::ast::{
+    BlockExpr, CallExpr, Decl, Expr, ExternDecl, File, FuncDecl, FuncSig, Ident, Int, Param, Stmt,
+};
+
+pub mod ast;
 
 pub struct Parser<'a> {
+    src: &'a str,
     lexer: Lexer<'a>,
-    current: Option<Token<'a>>,
 }
 
 impl<'a> Parser<'a> {
     pub fn new(src: &'a str) -> Self {
-        let mut lexer = Lexer::new(src);
-        let current = lexer.next();
-
-        Self { lexer, current }
+        Self {
+            src,
+            lexer: Lexer::new(src),
+        }
     }
 
     pub fn parse(&mut self) -> File {
@@ -24,9 +24,8 @@ impl<'a> Parser<'a> {
 
         self.skip_newlines();
 
-        while self.current.is_some() {
+        while self.lexer.peek_kind() != &TokenKind::Eof {
             decls.push(self.parse_decl());
-
             self.skip_newlines();
         }
 
@@ -34,31 +33,27 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_decl(&mut self) -> Decl {
-        match self.kind() {
-            Some(TokenKind::Extern) => Decl::Extern(self.parse_extern_decl()),
-            Some(TokenKind::Func) => Decl::Func(self.parse_func_decl()),
-
+        match self.lexer.peek_kind() {
+            TokenKind::Extern => Decl::Extern(self.parse_extern_decl()),
+            TokenKind::Func => Decl::Func(self.parse_func_decl()),
             kind => panic!("Expected Decl, found {:?}", kind),
         }
     }
 
     fn parse_extern_decl(&mut self) -> ExternDecl {
-        let ext = self.expect(TokenKind::Extern);
+        let external = self.expect(TokenKind::Extern);
         self.expect(TokenKind::OpenBrace);
+        self.skip_newlines();
 
         let mut funcs = Vec::new();
 
-        self.skip_newlines();
-
-        while self.kind() != Some(&TokenKind::CloseBrace) {
+        while self.lexer.peek_kind() != &TokenKind::CloseBrace {
             funcs.push(self.parse_func_decl());
-
             self.skip_newlines();
         }
 
         let close_brace = self.expect(TokenKind::CloseBrace);
-
-        let span = ext.span.join(close_brace.span);
+        let span = external.span.join(close_brace.span);
 
         ExternDecl { funcs, span }
     }
@@ -68,7 +63,7 @@ impl<'a> Parser<'a> {
         let name = self.parse_ident();
         let sig = self.parse_func_sig();
 
-        let (body, span) = if self.kind() == Some(&TokenKind::OpenBrace) {
+        let (body, span) = if self.lexer.peek_kind() == &TokenKind::OpenBrace {
             let body = self.parse_block_expr();
             let span = func.span.join(body.span);
 
@@ -86,81 +81,50 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_expr(&mut self) -> Expr {
-        match self.kind() {
-            Some(TokenKind::OpenBrace) => Expr::Block(self.parse_block_expr()),
-            Some(TokenKind::Ident(_)) => self.parse_ident_or_call_expr(),
-            _ => Expr::Lit(self.parse_lit()),
+        match self.lexer.peek_kind() {
+            TokenKind::OpenBrace => Expr::Block(self.parse_block_expr()),
+            TokenKind::Ident => {
+                let ident = self.parse_ident();
+
+                if self.lexer.peek_kind() == &TokenKind::OpenParen {
+                    Expr::Call(self.parse_call_expr(ident))
+                } else {
+                    Expr::Ident(ident)
+                }
+            }
+            TokenKind::Int => Expr::Int(self.parse_int()),
+            kind => panic!("Expected Expr, found {:?}", kind),
         }
     }
 
     fn parse_block_expr(&mut self) -> BlockExpr {
         let open_brace = self.expect(TokenKind::OpenBrace);
-
-        let mut expressions = Vec::new();
-
         self.skip_newlines();
 
-        while self.kind() != Some(&TokenKind::CloseBrace) {
-            expressions.push(self.parse_expr());
+        let mut stmts = Vec::new();
 
+        while self.lexer.peek_kind() != &TokenKind::CloseBrace {
+            stmts.push(Stmt::Expr(self.parse_expr()));
             self.skip_newlines();
         }
 
         let close_brace = self.expect(TokenKind::CloseBrace);
-
         let span = open_brace.span.join(close_brace.span);
 
-        BlockExpr { expressions, span }
+        BlockExpr { stmts, span }
     }
 
-    fn parse_ident_or_call_expr(&mut self) -> Expr {
-        let name = self.parse_ident();
-
-        if self.kind() == Some(&TokenKind::OpenParen) {
-            self.consume();
-
-            let mut args = Vec::new();
-
-            self.skip_newlines();
-
-            while self.kind() != Some(&TokenKind::CloseParen) {
-                args.push(self.parse_expr());
-
-                if self.kind() == Some(&TokenKind::Comma) {
-                    self.consume();
-                    self.skip_newlines();
-                } else {
-                    break;
-                }
-            }
-
-            self.skip_newlines();
-
-            let close_paren = self.expect(TokenKind::CloseParen);
-
-            let span = name.span.join(close_paren.span);
-
-            Expr::Call(CallExpr { name, args, span })
-        } else {
-            Expr::Ident(Ident {
-                value: name.value,
-                span: name.span,
-            })
-        }
-    }
-
-    fn parse_func_sig(&mut self) -> FuncSig {
-        let open_paren = self.expect(TokenKind::OpenParen);
-
-        let mut params = Vec::new();
-
+    fn parse_call_expr(&mut self, name: Ident) -> CallExpr {
+        self.expect(TokenKind::OpenParen);
         self.skip_newlines();
 
-        while self.kind() != Some(&TokenKind::CloseParen) {
-            params.push(self.parse_param());
+        let mut args = Vec::new();
 
-            if self.kind() == Some(&TokenKind::Comma) {
-                self.consume();
+        while self.lexer.peek_kind() != &TokenKind::CloseParen {
+            args.push(self.parse_expr());
+
+            if self.lexer.peek_kind() == &TokenKind::Comma {
+                self.lexer.next_token();
                 self.skip_newlines();
             } else {
                 break;
@@ -168,9 +132,31 @@ impl<'a> Parser<'a> {
         }
 
         self.skip_newlines();
-
         let close_paren = self.expect(TokenKind::CloseParen);
+        let span = name.span.join(close_paren.span);
 
+        CallExpr { name, args, span }
+    }
+
+    fn parse_func_sig(&mut self) -> FuncSig {
+        let open_paren = self.expect(TokenKind::OpenParen);
+        self.skip_newlines();
+
+        let mut params = Vec::new();
+
+        while self.lexer.peek_kind() != &TokenKind::CloseParen {
+            params.push(self.parse_param());
+
+            if self.lexer.peek_kind() == &TokenKind::Comma {
+                self.lexer.next_token();
+                self.skip_newlines();
+            } else {
+                break;
+            }
+        }
+
+        self.skip_newlines();
+        let close_paren = self.expect(TokenKind::CloseParen);
         let span = open_paren.span.join(close_paren.span);
 
         FuncSig { params, span }
@@ -180,35 +166,28 @@ impl<'a> Parser<'a> {
         let name = self.parse_ident();
         self.expect(TokenKind::Colon);
         let ty = self.parse_ident();
-
         let span = name.span.join(ty.span);
 
         Param { name, ty, span }
     }
 
     fn parse_ident(&mut self) -> Ident {
-        let (value, span) = self.expect_ident();
+        let ident = self.expect(TokenKind::Ident);
 
-        Ident { value, span }
+        Ident {
+            value: self.text(&ident).to_string(),
+            span: ident.span,
+        }
     }
 
-    fn parse_lit(&mut self) -> Lit {
-        let lit = match self.kind() {
-            Some(TokenKind::Int(int)) => match int {
-                token::Int::Signed(val) => Lit::Int(Int::Signed(*val)),
-                token::Int::Unsigned(val) => Lit::Int(Int::Unsigned(*val)),
-            },
+    fn parse_int(&mut self) -> Int {
+        let int = self.expect(TokenKind::Int);
 
-            kind => panic!("Expected Int, found {:?}", kind),
-        };
-
-        self.consume();
-
-        lit
+        Int::Unsigned(self.text(&int).parse::<u64>().unwrap())
     }
 
-    fn expect(&mut self, expected: TokenKind<'a>) -> Token<'a> {
-        let token = self.consume();
+    fn expect(&mut self, expected: TokenKind) -> Token {
+        let token = self.lexer.next_token();
 
         if token.kind != expected {
             panic!("Expected {:?}, found {:?}", expected, token.kind);
@@ -217,44 +196,24 @@ impl<'a> Parser<'a> {
         token
     }
 
-    fn expect_ident(&mut self) -> (String, Span) {
-        let token = self.consume();
-
-        match token.kind {
-            TokenKind::Ident(name) => (name.to_owned(), token.span),
-
-            kind => panic!("Expected Ident, found {:?}", kind),
-        }
-    }
-
     fn skip_newlines(&mut self) {
-        self.skip_while(|token| matches!(token.kind, TokenKind::Newline));
+        self.skip_while(|kind| kind == &TokenKind::Newline);
     }
 
-    fn skip_while(&mut self, predicate: impl Fn(&Token<'a>) -> bool + Copy) {
+    fn skip_while(&mut self, predicate: impl Fn(&TokenKind) -> bool + Copy) {
         while self.skip_if(predicate) {}
     }
 
-    fn skip_if(&mut self, predicate: impl Fn(&Token<'a>) -> bool) -> bool {
-        match self.current.as_ref() {
-            Some(token) if predicate(token) => {
-                self.consume();
-
-                true
-            }
-            _ => false,
+    fn skip_if(&mut self, predicate: impl Fn(&TokenKind) -> bool) -> bool {
+        if predicate(self.lexer.peek_kind()) {
+            self.lexer.next_token();
+            true
+        } else {
+            false
         }
     }
 
-    fn consume(&mut self) -> Token<'a> {
-        let current = self.current.take().expect("Unexpected end of file");
-
-        self.current = self.lexer.next();
-
-        current
-    }
-
-    fn kind(&self) -> Option<&TokenKind<'a>> {
-        self.current.as_ref().map(|token| &token.kind)
+    fn text(&self, token: &Token) -> &str {
+        &self.src[token.span.start..token.span.end]
     }
 }

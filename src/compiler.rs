@@ -3,7 +3,7 @@ use crate::compiler::asm::generator::Generator;
 use crate::compiler::asm::writer::Writer;
 use crate::compiler::parser::Parser;
 use crate::compiler::symbol::SymbolTable;
-use ast::File;
+use parser::ast::File;
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -11,13 +11,10 @@ use std::process::Command;
 
 pub mod analyzer;
 pub mod asm;
-pub mod ast;
-pub mod cursor;
 pub mod lexer;
 pub mod parser;
 pub mod span;
 pub mod symbol;
-pub mod token;
 
 pub struct Compiler<'a> {
     build_dir: &'a str,

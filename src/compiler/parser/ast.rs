@@ -30,12 +30,12 @@ pub enum Expr {
     Block(BlockExpr),
     Call(CallExpr),
     Ident(Ident),
-    Lit(Lit),
+    Int(Int),
 }
 
 #[derive(Clone, Debug)]
 pub struct BlockExpr {
-    pub expressions: Vec<Expr>,
+    pub stmts: Vec<Stmt>,
     pub span: Span,
 }
 
@@ -44,6 +44,11 @@ pub struct CallExpr {
     pub name: Ident,
     pub args: Vec<Expr>,
     pub span: Span,
+}
+
+#[derive(Clone, Debug)]
+pub enum Stmt {
+    Expr(Expr),
 }
 
 #[derive(Clone, Debug)]
@@ -63,11 +68,6 @@ pub struct Param {
 pub struct Ident {
     pub value: String,
     pub span: Span,
-}
-
-#[derive(Clone, Debug)]
-pub enum Lit {
-    Int(Int),
 }
 
 #[derive(Clone, Debug)]

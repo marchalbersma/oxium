@@ -5,14 +5,10 @@ pub struct Span {
 }
 
 impl Span {
-    pub fn new(start: usize, end: usize) -> Self {
-        Span { start, end }
-    }
-
     pub fn join(self, other: Span) -> Self {
         Self {
-            start: self.start,
-            end: other.end,
+            start: self.start.min(other.start),
+            end: self.end.max(other.end),
         }
     }
 }
